@@ -6,7 +6,7 @@ software.
 Each branch in the git repository corresponds to a GRASS major version
 (e.g. `7.0`) with the master branch following GRASS trunk. These branch names
 are reflected in the image tags on the Docker Index (e.g. branch `7.0`
-corresponds to the image `geodata/gdal:7.0`).
+corresponds to the image `geodata/grass:7.0`).
 
 ## Usage
 
