@@ -53,17 +53,15 @@ netcdf-bin libnetcdf-dev
 GRASS := /usr/local/bin/grass
 GDAL_CONFIG := /usr/local/bin/gdal_config
 BUILD_ESSENTIAL := /usr/share/build-essential
+MAN := /usr/bin/man
 
 # Build tools.
 SVN := /usr/bin/svn
 GIT := /usr/bin/git
 
-# The number of processors available.
-NPROC := $(shell nproc)
-
 install: $(GRASS)
 
-$(GRASS): /tmp/grass $(BUILD_ESSENTIAL) $(GDAL_CONFIG)
+$(GRASS): /tmp/grass $(BUILD_ESSENTIAL) $(GDAL_CONFIG) $(MAN)
 	cd /tmp/grass/ \
 	&& CFLAGS="-O2 -Wall" LDFLAGS="-s" ./configure \
 		--enable-largefile=yes \
@@ -83,11 +81,15 @@ $(GRASS): /tmp/grass $(BUILD_ESSENTIAL) $(GDAL_CONFIG)
 		--with-odbc=yes \
 		--with-netcdf=yes \
 		--with-liblas=yes \
-	&& make -j$(NPROC) \
+	&& make -j$$(nproc) \
 	&& make install \
+	&& export WITH_GRASS=/usr/local/grass-$$(head -3 /tmp/grass/include/VERSION | tr "\n" . | sed 's/\.$$//') \
+	&& echo "$${WITH_GRASS}/lib" > /etc/ld.so.conf.d/grass.conf \
 	&& ldconfig \
 	&& ln -fs /usr/local/bin/grass$$(head -2 /tmp/grass/include/VERSION | tr -d "\n") $(GRASS) \
-	&& touch -c $(GRASS)
+	&& touch -c -r /tmp/apt-updated $(GDAL_CONFIG) \
+	&& make -C /usr/local/src/gdal-docker install WITH_GRASS=$$WITH_GRASS \
+	&& touch -c $(GDAL_CONFIG) $(GRASS)
 
 $(GDAL_CONFIG): /usr/local/src/gdal-docker
 	make -C /usr/local/src/gdal-docker install \
@@ -99,6 +101,9 @@ $(GDAL_CONFIG): /usr/local/src/gdal-docker
 /tmp/grass: $(SVN)
 	$(SVN) checkout --quiet "http://svn.osgeo.org/grass/grass/$(GRASS_VERSION)/" /tmp/grass/ \
 	&& touch -c /tmp/grass
+
+$(MAN): /tmp/apt-updated
+	apt-get install -y man && touch -c $(MAN)
 
 $(SVN): /tmp/apt-updated
 	apt-get install -y subversion && touch -c $(SVN)
